@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 #include <random>
+#include <optional>
 
 class Matrix{
     private:
@@ -10,6 +11,7 @@ class Matrix{
      std::vector<std::vector<float>> index;
 
     public:
+    Matrix() : rows(0), cols(0) {}
     Matrix(const u_int rows,const u_int cols){
         this->rows =rows;
         this->cols=cols;
@@ -49,11 +51,46 @@ class Matrix{
         std::cout<<"\n";
     }
 
+    Matrix const transpose(){
+        Matrix t_matrix = Matrix();
+        t_matrix.index = std::vector<std::vector<float>>(this->cols,std::vector<float>(this->rows));
+        for (std::size_t i{0}; i<this->index.size(); i++){
+            for (std::size_t j{0}; j<this->index.at(i).size();j++){
+                t_matrix.index[j][i] = this->index[i][j];
+            }
+        }
+        return t_matrix;
+    }
+
+    std::optional<Matrix> const add(const Matrix m2){
+        if(this->cols != m2.cols || this->rows != m2.rows){
+            std::cout << "ERROR: Matrixes should be at equal sizes for adding\n";
+            return std::nullopt;
+        }
+        Matrix result = Matrix();
+        result.index = std::vector<std::vector<float>>(this->rows,std::vector<float>(cols));
+        for(std::size_t i{0}; i<this->index.size();i++){
+            for(std::size_t j{0}; j<this->index[i].size();j++){
+                result.index[i][j] = this->index[i][j] + m2.index[i][j];
+            }
+        }
+        return result;
+    }
+
 };
 
 int main(){
-    std::unique_ptr<Matrix> p1(new Matrix(3,3));
-    
+    std::unique_ptr<Matrix> m1(new Matrix(3,3));
+    auto m2 = std::make_unique<Matrix>(3,3);
+    auto added = m1->add(*m2);
 
+    //auto t_p1 = std::make_unique<Matrix>();
+    //*t_p1 = p1->transpose();
+    //std::cout<<"\nTranspose:\n";
+    //t_p1->print();
+    if(added){
+    std::cout<<"Matrix addition:\n";
+    added->print();
+    }
 }
 
