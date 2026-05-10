@@ -68,10 +68,34 @@ class Matrix{
             return std::nullopt;
         }
         Matrix result = Matrix();
+        result.cols=cols;
+        result.rows=rows;
         result.index = std::vector<std::vector<float>>(this->rows,std::vector<float>(cols));
         for(std::size_t i{0}; i<this->index.size();i++){
             for(std::size_t j{0}; j<this->index[i].size();j++){
                 result.index[i][j] = this->index[i][j] + m2.index[i][j];
+            }
+        }
+        return result;
+    }
+
+    std::optional<Matrix> const dotProduct(const Matrix m2){
+        if(this->cols != m2.rows){
+            std::cout << "ERROR: Matrixes are not at avaible sizes for product\n";
+            return std::nullopt;
+        }
+        Matrix result = Matrix();
+        result.rows = this->rows;
+        result.cols = m2.cols;
+        result.index = std::vector<std::vector<float>>(this->rows,std::vector<float>(m2.cols));
+        
+        for(std::size_t i{0}; i<result.index.size();i++){
+            for(std::size_t j{0}; j<result.index[i].size();j++){
+                float sum{0};
+                for(std::size_t k{0}; k<this->cols;k++){
+                    sum += this->index[i][k] * m2.index[k][j];
+                }
+                result.index[i][j] = sum;
             }
         }
         return result;
@@ -82,15 +106,21 @@ class Matrix{
 int main(){
     std::unique_ptr<Matrix> m1(new Matrix(3,3));
     auto m2 = std::make_unique<Matrix>(3,3);
+    auto product = m1->dotProduct(*m2);
     auto added = m1->add(*m2);
 
-    //auto t_p1 = std::make_unique<Matrix>();
-    //*t_p1 = p1->transpose();
-    //std::cout<<"\nTranspose:\n";
-    //t_p1->print();
+    auto t_m1 = std::make_unique<Matrix>();
+    *t_m1 = m1->transpose();
+    std::cout<<"\nTranspose:\n";
+    t_m1->print();
     if(added){
     std::cout<<"Matrix addition:\n";
     added->print();
+    }
+
+    if(product){
+        std::cout<<"Product:"<<std::endl;
+        product->print();
     }
 }
 
