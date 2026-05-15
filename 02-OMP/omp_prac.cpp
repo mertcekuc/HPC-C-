@@ -1,27 +1,33 @@
 #include <iostream>
 #include <omp.h>
-#include <sstream>
+#include <chrono>
 
 int main() {
-    omp_set_num_threads(8);
-    double sum_pi{0};
-    double step{0.000000001};
-    double interval {1.0/8.0};
-    
 
-    #pragma omp parallel
-    {
-        double x{omp_get_thread_num() * interval};
-        double end {x+interval};
-        double sum=0;
-        while(x<=end){
-            sum += 4/(1+(x*x));
-            x+=step;
-        }
-        #pragma omp atomic
-            sum_pi+=sum;
-        
+    const int num_threads = 4;
+    omp_set_num_threads(num_threads);
+
+    const long long num_steps = 100000000;
+    const double step = 1.0 / static_cast<double>(num_steps);
+
+    double total = 0.0;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    #pragma omp parallel for reduction(+:total)
+    for (long long i = 0; i < num_steps; ++i) {
+
+        double x = i * step;
+
+        total += 4.0 / (1.0 + x * x);
     }
 
-    std::cout<<"\nPI:" << sum_pi;
+    double pi = total * step;
+
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> elapsed = end - start;
+
+    std::cout << "PI: " << pi << '\n';
+    std::cout << "Time taken: " << elapsed.count() << " seconds\n";
 }
