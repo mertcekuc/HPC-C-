@@ -93,11 +93,14 @@ static long num_trials = 1000000000;
 
 int main ()
 {
+
+   omp_set_num_threads(4);
    long i;  long Ncirc = 0;
    double pi, x, y, test;
    double r = 1.0;   // radius of circle. Side of squrare is 2*r 
 
    seed(-r, r);  // The circle and square are centered at the origin
+   double start = omp_get_wtime();
 #pragma omp parallel for private(x,y,test) reduction(+:Ncirc)
    for(i=0;i<num_trials; i++)
    {
@@ -110,7 +113,8 @@ int main ()
     }
 
     pi = 4.0 * ((double)Ncirc/(double)num_trials);
-
+    double end = omp_get_wtime();
+   std::cout << "Time: " << end-start << " seconds \n";
     std::cout << "\n " << num_trials << " trials, pi is " << pi << " \n";
 
     return 0;
