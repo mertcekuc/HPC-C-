@@ -3,7 +3,7 @@
 #include <vector>
 #include <random>
 
-const int N = 10000;
+const int N = 3000;
 const int BS = 32;   // block size (cache-friendly)
 
 void fill_vec(std::vector<double>& v) {
@@ -38,7 +38,7 @@ int main() {
 
     double start = omp_get_wtime();
 
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for collapse(2) schedule(dynamic)
     for (int ii = 0; ii < N; ii += BS) {
         for (int jj = 0; jj < N; jj += BS) {
 
@@ -48,12 +48,12 @@ int main() {
                     for (int j = jj; j < jj + BS && j < N; j++) {
 
                         double sum = C[i * N + j];
-
                         for (int k = kk; k < kk + BS && k < N; k++) {
                             sum += A[i * N + k] * BT[j * N + k];
                         }
 
                         C[i * N + j] = sum;
+                        
                     }
                 }
 
