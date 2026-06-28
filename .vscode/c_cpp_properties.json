@@ -16,7 +16,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/homebrew/include",
-                "/opt/homebrew/opt/libomp/include"
+                "/opt/homebrew/opt/libomp/include",
+                "/opt/homebrew/opt/openblas/include"
             ],
             "defines": [
                 "_OPENMP"
@@ -28,4 +29,4 @@
         }
     ],
     "version": 4
-}
+}   

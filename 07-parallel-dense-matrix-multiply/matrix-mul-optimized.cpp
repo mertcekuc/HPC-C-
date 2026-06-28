@@ -2,9 +2,11 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <cblas.h>
+#include <openblas_config.h>
 
 const int N = 3000;
-const int BS = 32;   // block size (cache-friendly)
+const int BS = 32;  
 
 void fill_vec(std::vector<double>& v) {
     std::random_device rd;
@@ -26,6 +28,8 @@ void transpose(const std::vector<double>& A, std::vector<double>& B) {
 
 int main() {
     omp_set_num_threads(8);
+    openblas_set_num_threads(8);
+
 
     std::vector<double> A(N * N);
     std::vector<double> B(N * N);
@@ -63,7 +67,12 @@ int main() {
 
     double end = omp_get_wtime();
 
-    std::cout << "Time: " << (end - start) << " sec\n";
+    std::cout << "Time (custom openmp): " << (end - start) << " sec\n";
 
+    start = omp_get_wtime();    
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N, N, N, 1.0, A.data(), N, BT.data(), N, 0.0, C.data(), N);
+    end = omp_get_wtime();
+
+    std::cout << "Time (cblas_dgemm): " << (end - start) << " sec\n";
     return 0;
 }
