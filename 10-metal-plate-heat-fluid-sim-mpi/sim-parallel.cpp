@@ -31,17 +31,16 @@ int main(int argc, char** argv) {
         if (scanf("%d", &max_iterations) != 1) {
             max_iterations = 1000;
         }
-        start_time = MPI_Wtime(); // Zamanlayıcıyı başlat
+        start_time = MPI_Wtime();
     }
 
-    // Iteration sayısını tüm süreçlere bildir
     MPI_Bcast(&max_iterations, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     initialize();
 
     int rows_per_process = ROWS / size;
     int start_row = rank * rows_per_process + 1;
-    // Bölünmeyen satır kalırsa son süreç üstlenir
+
     int end_row = (rank == size - 1) ? ROWS : (rank + 1) * rows_per_process;
 
     // Komşu rank tanımlamaları (Sınır dışındakiler için MPI_PROC_NULL kullanılır)
