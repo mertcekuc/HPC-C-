@@ -4,7 +4,7 @@
 #include <vector>
 #include <array>
 
-#define NUM_ELEMENTS 64 * 1024 * 2 * 2
+#define NUM_ELEMENTS 64*64*1024
 void fill_array(std::vector<int> &arr);
 void merge_sort(std::vector<int> &arr);
 std::vector<int> merge_arrs(const std::vector<int> &left, const std::vector<int> &right);
@@ -18,64 +18,95 @@ void fill_array(std::vector<int> &arr)
     }
 }
 
-void merge_sort(std::vector<int> &arr)
+void merge_sort_impl(
+    std::vector<int>& arr,
+    std::vector<int>& temp,
+    size_t left,
+    size_t right)
 {
-    size_t size{arr.size()};
-    if (size <= 1)
-    {
+    if (right - left <= 1)
         return;
-    }
 
-    size_t mid{size / 2};
-    std::vector<int> arr_l(arr.begin(), arr.begin() + mid);
-    std::vector<int> arr_r(arr.begin() + mid, arr.end());
+    size_t mid = left + (right - left) / 2;
 
-    size_t size_l{arr_l.size()};
-    size_t size_r{arr_r.size()};
+    merge_sort_impl(arr, temp, left, mid);
+    merge_sort_impl(arr, temp, mid, right);
 
-    merge_sort(arr_l);
-    merge_sort(arr_r);
+    size_t l = left;
+    size_t r = mid;
+    size_t i = left;
 
-    arr = merge_arrs(arr_l, arr_r);
-}
-
-std::vector<int> merge_arrs(const std::vector<int> &left, const std::vector<int> &right)
-{
-    size_t size_l{left.size()};
-    size_t size_r{right.size()};
-    size_t l{0}, r{0};
-    std::vector<int> result;
-    result.reserve(size_l + size_r);
-
-    for (size_t i = 0; i < size_l + size_r; i++)
+    while (l < mid && r < right)
     {
-        if (l >= size_l)
+        if (arr[l] <= arr[r])
         {
-            result.push_back(right[r]);
-            r++;
-            continue;
-        }
-        else if (r >= size_r)
-        {
-            result.push_back(left[l]);
-            l++;
-            continue;
+            temp[i++] = arr[l++];
         }
         else
         {
-            if (left[l] < right[r])
-            {
-                result.push_back(left[l]);
-                l++;
-                continue;
-            }
-            else
-            {
-                result.push_back(right[r]);
-                r++;
-                continue;
-            }
+            temp[i++] = arr[r++];
         }
+    }
+
+    while (l < mid)
+    {
+        temp[i++] = arr[l++];
+    }
+
+    while (r < right)
+    {
+        temp[i++] = arr[r++];
+    }
+
+    for (size_t j = left; j < right; j++)
+    {
+        arr[j] = temp[j];
+    }
+}
+
+void merge_sort(std::vector<int>& arr)
+{
+    if (arr.size() <= 1)
+        return;
+
+    std::vector<int> temp(arr.size());
+
+    merge_sort_impl(arr, temp, 0, arr.size());
+}
+
+std::vector<int> merge_arrs(
+    const std::vector<int>& left,
+    const std::vector<int>& right)
+{
+    const size_t size_l = left.size();
+    const size_t size_r = right.size();
+
+    std::vector<int> result(size_l + size_r);
+
+    size_t l = 0;
+    size_t r = 0;
+    size_t i = 0;
+
+    while (l < size_l && r < size_r)
+    {
+        if (left[l] <= right[r])
+        {
+            result[i++] = left[l++];
+        }
+        else
+        {
+            result[i++] = right[r++];
+        }
+    }
+
+    while (l < size_l)
+    {
+        result[i++] = left[l++];
+    }
+
+    while (r < size_r)
+    {
+        result[i++] = right[r++];
     }
 
     return result;
@@ -107,7 +138,6 @@ int main()
     if (rank == 0)
     {
         fill_array(arr);
-        start_time = MPI_Wtime();
     }
 
     MPI_Scatterv(arr.data(),
@@ -123,39 +153,54 @@ int main()
     if (rank == 0)
     {
         std::cout << "Sorting..." << std::endl;
+        start_time = MPI_Wtime();
     }
 
     merge_sort(local_arr);
 
     int step = 1;
-    
-    while (step <size)
+    MPI_Status status;
+    while (step < size)
     {
-            if (rank%(step * 2) == step )
-            {
-                MPI_Ssend(local_arr.data(),
-                          local_arr.size(),
-                          MPI_INT, rank-step,
-                          0, MPI_COMM_WORLD);
-            }
-            else if (rank%(step * 2) == 0)
-            {
-                std::vector<int> recv_arr(local_arr.size());
-                MPI_Recv(recv_arr.data(),
-                         recv_arr.size(),
-                         MPI_INT, rank+step,
-                         0, MPI_COMM_WORLD,
-                         MPI_STATUS_IGNORE);
-                local_arr = merge_arrs(local_arr, recv_arr);
-            }
-        
+
+        if (rank % (step * 2) == step)
+        {
+
+            MPI_Send(local_arr.data(),
+                      local_arr.size(),
+                      MPI_INT, rank - step,
+                      0, MPI_COMM_WORLD);
+        }
+        else if (rank % (step * 2) == 0)
+        {
+            MPI_Probe(
+                rank + step,
+                0,
+                MPI_COMM_WORLD,
+                &status);
+
+            int recv_count;
+            MPI_Get_count(&status, MPI_INT, &recv_count);
+            std::vector<int> recv_arr(recv_count);
+
+            MPI_Recv(recv_arr.data(),
+                     recv_arr.size(),
+                     MPI_INT, rank + step,
+                     0, MPI_COMM_WORLD,
+                     &status);
+            local_arr = merge_arrs(local_arr, recv_arr);
+        }
+
         step *= 2;
     }
+
     if (rank == 0)
     {
         double end_time = MPI_Wtime();
         std::cout << std::endl;
         std::cout << "Time taken: " << end_time - start_time << " seconds" << std::endl;
+        // sorted array
+  
     }
 
     MPI_Finalize();
