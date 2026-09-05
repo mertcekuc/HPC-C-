@@ -2,6 +2,7 @@
 #include <math.h>
 #include <vector>
 #include <random>
+#include <chrono>
 
 
 #define DIMS 1000.0
@@ -9,6 +10,7 @@
 #define N 100000
 #define ITER_COOUNT 3
 #define K 1.0
+#define DT 0.01
 
 typedef struct Body {
     double mass{1.0};
@@ -22,12 +24,13 @@ void calculate_interactions(Body &b, std::vector<Body> &arr){
     double f, fx{0}, fy{0};
 
     for(size_t i=0; i<N; i++){
+        if(&b == &arr[i]) continue;
+
         dx = arr[i].x - b.x;
         dy = arr[i].y - b.y;
-        distance = std::sqrt(std::pow(std::abs(dx),2)+
-                    std::pow(std::abs(dy),2));
+        distance = std::sqrt(dx*dx + dy*dy);
         
-        if(distance > 10) continue;
+        if(distance > LIM_RADIUS || distance == 0.0) continue;
         
         f = K*(b.mass * arr[i].mass) / (distance*distance);
         fx += (f * dx / distance);
@@ -36,17 +39,17 @@ void calculate_interactions(Body &b, std::vector<Body> &arr){
     }
 
         double ax{fx/b.mass}, ay{fy/b.mass};
-        b.vx += ax;
-        b.vy += ay;
+        b.vx += ax * DT;
+        b.vy += ay * DT;
 }
 
 void process_movements(std::vector<Body> &arr){
     for(size_t i = 0; i<N; i++){
-        arr[i].x += arr[i].vx;
-        arr[i].y += arr[i].vy;
+        arr[i].x += arr[i].vx * DT;
+        arr[i].y += arr[i].vy * DT;
 
-        if(arr[i].x > 1000){
-            arr[i].x = 1000;
+        if(arr[i].x > DIMS){
+            arr[i].x = DIMS;
             arr[i].vx *= -1;
         }
 
@@ -55,8 +58,8 @@ void process_movements(std::vector<Body> &arr){
             arr[i].vx *= -1;
         }
 
-        if(arr[i].y > 1000){
-            arr[i].y = 1000;
+        if(arr[i].y > DIMS){
+            arr[i].y = DIMS;
             arr[i].vy *= -1;
         }
 
@@ -69,11 +72,11 @@ void process_movements(std::vector<Body> &arr){
     }
 }
 
-void fill_grid(std::vector<Body> &arr){
+void initialize_particles(std::vector<Body> &arr){
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<double> dist(0.0, 1000.0);
+    std::uniform_real_distribution<double> dist(0.0, DIMS);
 
     for(size_t i=0; i<N; i++){
         arr[i].x = dist(gen);
@@ -85,9 +88,9 @@ void fill_grid(std::vector<Body> &arr){
 int main(){
 
     std::vector<Body> particules (N);
-    fill_grid(particules);
+    initialize_particles(particules);
     std::cout << "Starting simulation with " << N << " particules" << std::endl;
-    double start = clock();
+    auto start = std::chrono::high_resolution_clock::now();
 
     for(int i=0; i<ITER_COOUNT; i++){
         for(size_t j=0; j<N; j++)
@@ -97,8 +100,8 @@ int main(){
         std::cout << "Iteration " << i+1 << " completed" << std::endl;
     }
 
-    double end = clock();
-    std::cout << "Execution time: " << (end-start)/CLOCKS_PER_SEC << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "Execution time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << " ms" << std::endl;
 
     return 0;
 }
