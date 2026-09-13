@@ -3,7 +3,7 @@
 #include <vector>
 #include <random>
 #include <chrono>
-
+#include <mpi.h>
 
 #define DIMS 1000.0
 #define LIM_RADIUS 10.0
@@ -72,18 +72,6 @@ void process_movements(std::vector<Body> &arr){
     }
 }
 
-void initialize_particles(std::vector<Body> &arr){
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<double> dist(0.0, DIMS);
-
-    for(size_t i=0; i<N; i++){
-        arr[i].x = dist(gen);
-        arr[i].y = dist(gen);
-    }
-}
-
 void process_movement(Body &b){
     b.x += b.vx * DT;
     b.y += b.vy * DT;
@@ -109,20 +97,61 @@ void process_movement(Body &b){
         }
 }
 
+void initialize_particles(std::vector<Body> &arr){
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dist(0.0, DIMS);
+
+    for(size_t i=0; i<N; i++){
+        arr[i].x = dist(gen);
+        arr[i].y = dist(gen);
+    }
+}
+
+
 int main(){
+    MPI_Init(NULL,NULL);
+    int rank,size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Status status;
 
     std::vector<Body> particules (N);
-    initialize_particles(particules);
+    std::vector<Body> local_grid;
+    std::vector<std::vector<Body>> grids (4);
+    int grid_dims = DIMS/std::sqrt(size);
+
+    if(rank==0) {
+        initialize_particles(particules);
+        int row,col,grid;
+        for(auto i:particules){
+            col = i.x/grid_dims;
+            row = i.y/grid_dims;
+            grid = col * grid_dims + row;
+            grids[grid].push_back(i);
+        }
+        for(int i=1; i<size; i++){
+            int size = grids.size();
+            MPI_Send(grids[i].data(),size, MPI_BYTE, i, 0, MPI_COMM_WORLD);
+        }
+
+    }
+    else{
+        MPI_Probe(0,0,MPI_COMM_WORLD, &status);
+        int size;
+        MPI_Get_count(&status, MPI_BYTE,&size);
+        local_grid.resize(size);
+        MPI_Recv(local_grid.data(), size, MPI_BYTE, 0, 0, MPI_COMM_WORLD, &status);
+
+    }
+
+
+
     std::cout << "Starting simulation with " << N << " particules" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
-
-    for(int i=0; i<ITER_COOUNT; i++){
-        for(size_t j=0; j<N; j++)
-            calculate_interactions(particules[j],particules);
-        
-        process_movements(particules);
-        std::cout << "Iteration " << i+1 << " completed" << std::endl;
-    }
+    
+    
 
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << "Execution time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << " ms" << std::endl;
