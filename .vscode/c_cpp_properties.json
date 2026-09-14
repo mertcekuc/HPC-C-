@@ -1,14 +1,16 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "Mac C++",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/opt/homebrew/include"
+
             ],
-            "compilerPath": "/usr/bin/mpic++",
+            "compilerPath": "/opt/homebrew/bin/mpic++",
             "cStandard": "c17",
             "cppStandard": "c++20",
-            "intelliSenseMode": "linux-gcc-x64"
+            "intelliSenseMode": "macos-gcc-arm64"
         }
     ],
     "version": 4
