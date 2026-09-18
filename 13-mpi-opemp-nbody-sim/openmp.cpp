@@ -9,12 +9,12 @@
 #define DIMS 1000.0
 #define LIM_RADIUS 10.0
 #define N 100000
-#define ITER_COOUNT 3
+#define ITER_COOUNT 100
 #define K 1.0
 #define DT 0.01
 
 typedef struct Body {
-    double mass{1.0};
+    double mass;
     double vx{0.0}, vy{0.0};
     double x,y;
 } Body;
@@ -98,15 +98,18 @@ void process_movement(Body &b){
         }
 }
 
-void initialize_particles(std::vector<Body> &arr){
-
+void initialize_particles(std::vector<Body> &arr)
+{
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> dist(0.0, DIMS);
+    std::uniform_real_distribution<double> mass_dist(0.5, 2.0);
 
-    for(size_t i=0; i<N; i++){
+    for (size_t i = 0; i < N; i++)
+    {
         arr[i].x = dist(gen);
         arr[i].y = dist(gen);
+        arr[i].mass = mass_dist(gen);
     }
 }
 

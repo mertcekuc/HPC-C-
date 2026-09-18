@@ -1,3 +1,8 @@
+//for compile on mcaos
+//OMPI_CXX=g++-15 mpic++ -O3 -mcpu=apple-m2 -flto -ffast-math -fopenmp mpi-omp-hybrid.cpp -o hybrid
+//for run
+//OMP_NUM_THREADS=2 mpirun -np 4 ./hybrid
+
 #include <iostream>
 #include <cmath>
 #include <vector>
@@ -74,6 +79,7 @@ void calculate_interactions(Body &b, const std::vector<Body> &arr, const std::ve
 
 void process_movements(std::vector<Body> &arr)
 {
+    #pragma omp parallel for
     for (size_t i = 0; i < arr.size(); i++)
     {
         arr[i].x += arr[i].vx * DT;
@@ -155,7 +161,7 @@ void find_grids(const std::vector<Body> &local, std::vector<std::vector<Body>> &
 {
     int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    
+
     // HATA DUZELTMESI: Bölmeler double tipine çekilerek hassasiyet kaybı önlendi
     int space_dimm = std::sqrt(size);
     double grid_dimm = DIMS / space_dimm;
@@ -177,7 +183,12 @@ void find_grids(const std::vector<Body> &local, std::vector<std::vector<Body>> &
 
 int main(int argc, char **argv)
 {
-    MPI_Init(&argc, &argv);
+    int provided;
+    MPI_Init_thread(
+        &argc,
+        &argv,
+        MPI_THREAD_FUNNELED,
+        &provided);
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -218,7 +229,7 @@ int main(int argc, char **argv)
     else
     {
         MPI_Probe(0, 0, MPI_COMM_WORLD, &status);
-        
+
         // HATA DUZELTMESI: 'int size' tanımlanarak dıştaki MPI 'size' değişkeninin gölgelenmesi (shadowing) engellendi
         int recv_bytes = 0;
         MPI_Get_count(&status, MPI_BYTE, &recv_bytes);
@@ -262,11 +273,11 @@ int main(int argc, char **argv)
                     size_msg * sizeof(Body),
                     MPI_BYTE,
                     j,
-                    MPI_COMM_WORLD
-                );
+                    MPI_COMM_WORLD);
             }
         }
 
+        #pragma omp parallel for
         for (auto &b : local_grid)
         {
             calculate_interactions(b, local_grid, halos);
@@ -317,9 +328,7 @@ int main(int argc, char **argv)
             MPI_Alltoallv(
                 contiguous_grids.data(), send_counts.data(), send_displs.data(), MPI_BYTE,
                 local_grid.data(), recv_counts.data(), recv_displs.data(), MPI_BYTE,
-                MPI_COMM_WORLD
-            );
-
+                MPI_COMM_WORLD);
         }
     }
 
