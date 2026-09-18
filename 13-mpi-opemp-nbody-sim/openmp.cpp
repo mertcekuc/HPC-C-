@@ -117,7 +117,7 @@ int main(){
     initialize_particles(particules);
     std::cout << "Starting simulation with " << N << " particules" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
-    omp_set_num_threads(4);
+    omp_set_num_threads(8);
     
     #pragma omp parallel shared(particules)
     {
